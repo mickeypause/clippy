@@ -4,6 +4,7 @@ final class MenuManager: NSObject {
     private let apiService: APIServiceManager
     private var activeWindow: NSWindow?
     private let tooltipController = TooltipViewController()
+    private let systemLevelReplacer = SystemLevelTextReplacer()
     
     init(apiService: APIServiceManager) {
         self.apiService = apiService
@@ -28,8 +29,6 @@ final class MenuManager: NSObject {
         let menu = NSMenu()
         menu.autoenablesItems = false
         
-        addTransformationMenuItems(to: menu, selectedText: selectedText, completion: completion)
-        menu.addItem(NSMenuItem.separator())
         addAIMenuItems(to: menu, selectedText: selectedText, selectionBounds: bounds, completion: completion)
         
         let menuPosition = CGRect(
@@ -42,32 +41,7 @@ final class MenuManager: NSObject {
         displayMenuAtLocation(menu: menu, bounds: menuPosition)
     }
     
-    private func addTransformationMenuItems(
-        to menu: NSMenu,
-        selectedText: String,
-        completion: @escaping (String) -> Void
-    ) {
-        let transformations: [(String, (String) -> String)] = [
-            ("UPPERCASE", { $0.uppercased() }),
-            ("lowercase", { $0.lowercased() }),
-            ("Title Case", { $0.capitalized }),
-            ("Reverse Text", { String($0.reversed()) }),
-            ("Character Count", { "\($0.count) characters" }),
-            ("Word Count", { "\($0.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count) words" }),
-            ("Remove Extra Spaces", { $0.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression).trimmingCharacters(in: .whitespacesAndNewlines) })
-        ]
-        
-        for (title, transform) in transformations {
-            let item = NSMenuItem(title: title, action: #selector(handleTransformation(_:)), keyEquivalent: "")
-            item.target = self
-            item.representedObject = TransformationAction(
-                transform: { transform(selectedText) },
-                completion: completion
-            )
-            item.isEnabled = true
-            menu.addItem(item)
-        }
-    }
+   
     
     private func addAIMenuItems(
         to menu: NSMenu,
@@ -142,18 +116,6 @@ final class MenuManager: NSObject {
         
         closeActiveWindow()
         
-        // Show tooltip with loading state
-        tooltipController.showTooltip(
-            at: action.selectionBounds,
-            originalText: action.selectedText
-        ) { [weak self] transformedText in
-            // This closure is called when user accepts the transformation
-            DispatchQueue.main.async {
-                action.completion(transformedText)
-                self?.tooltipController.hideTooltip()
-            }
-        }
-        
         print("📡 Sending request to API...")
         
         apiService.transformText(action.selectedText, instruction: action.instruction) { [weak self] result in
@@ -161,10 +123,16 @@ final class MenuManager: NSObject {
                 switch result {
                 case .success(let transformedText):
                     print("✅ AI transformation successful: '\(transformedText)'")
-                    self?.tooltipController.updateWithResult(transformedText)
+                    
+                    // Try system-level replacement first (works universally)
+                    if self?.systemLevelReplacer.replaceSelectedTextUniversally(with: transformedText) == true {
+                        print("✅ System-level text replacement succeeded")
+                    } else {
+                        print("❌ System-level replacement failed, using callback")
+                        action.completion(transformedText)
+                    }
                 case .failure(let error):
                     print("❌ AI transformation failed: \(error)")
-                    self?.tooltipController.hideTooltip()
                     self?.showErrorAlert(error)
                 }
             }

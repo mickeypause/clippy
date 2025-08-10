@@ -81,7 +81,7 @@ final class APIServiceManager {
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let messages = [
-            ["role": "system", "content": "You are a text transformation assistant. Follow the user's instructions precisely and return only the transformed text without any additional commentary."],
+            ["role": "system", "content": "You are a text transformation assistant. Follow the user's instructions precisely and return ONLY the single best transformed text as a direct replacement. Do not provide multiple options, explanations, or any additional commentary. Return only the transformed text that can directly replace the original."],
             ["role": "user", "content": "\(instruction):\n\n\(text)"]
         ]
         
@@ -163,7 +163,7 @@ final class APIServiceManager {
             "contents": [
                 [
                     "parts": [
-                        ["text": "\(instruction):\n\n\(text)"]
+                        ["text": "You are a text transformation assistant. Follow the user's instructions precisely and return ONLY the single best transformed text as a direct replacement. Do not provide multiple options, explanations, or any additional commentary. Return only the transformed text that can directly replace the original.\n\n\(instruction):\n\n\(text)"]
                     ]
                 ]
             ]
@@ -245,7 +245,7 @@ final class APIServiceManager {
             "messages": [
                 [
                     "role": "user",
-                    "content": "\(instruction):\n\n\(text)"
+                    "content": "You are a text transformation assistant. Follow the user's instructions precisely and return ONLY the single best transformed text as a direct replacement. Do not provide multiple options, explanations, or any additional commentary. Return only the transformed text that can directly replace the original.\n\n\(instruction):\n\n\(text)"
                 ]
             ]
         ]

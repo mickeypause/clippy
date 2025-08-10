@@ -9,6 +9,7 @@ struct SettingsView: View {
             headerSection
             providerSelection
             apiKeySection
+            appSettingsSection
             usageInstructions
             
             Spacer()
@@ -20,7 +21,7 @@ struct SettingsView: View {
             }
         }
         .padding(24)
-        .frame(width: 480, height: 320)
+        .frame(width: 480, height: 380)
         .sheet(isPresented: $showingAPIKeyHelp) {
             APIKeyHelpView()
         }
@@ -89,6 +90,16 @@ struct SettingsView: View {
         case .claude:
             SecureField("Enter Claude API Key", text: $settingsManager.claudeKey)
                 .textFieldStyle(.roundedBorder)
+        }
+    }
+    
+    private var appSettingsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("App Settings")
+                .font(.headline)
+            
+            Toggle("Launch Clippy at startup", isOn: $settingsManager.launchAtStartup)
+                .toggleStyle(.checkbox)
         }
     }
     
