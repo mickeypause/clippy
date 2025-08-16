@@ -31,7 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     
     private func setupDependencies() {
         settingsManager = SettingsManager()
-        apiServiceManager = APIServiceManager(settingsManager: settingsManager!)
+        apiServiceManager = APIServiceManager()
         textSelectionMonitor = TextSelectionMonitor()
         textReplacer = TextReplacer()
         menuManager = MenuManager(apiService: apiServiceManager!)
@@ -83,9 +83,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hostingController = NSHostingController(rootView: settingsView)
         
         let window = NSWindow(contentViewController: hostingController)
-        window.title = "Clippy Settings"
-        window.setContentSize(NSSize(width: 480, height: 320))
-        window.styleMask = [.titled, .closable]
+        window.title = "Clippy"
+        window.setContentSize(NSSize(width: 500, height: 600))
+        window.styleMask = [.titled, .closable, .fullSizeContentView]
+        window.titlebarAppearsTransparent = true
+        window.isMovableByWindowBackground = true
         window.center()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

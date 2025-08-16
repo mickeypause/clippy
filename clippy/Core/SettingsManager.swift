@@ -2,40 +2,23 @@ import Foundation
 import Combine
 import ServiceManagement
 
-enum AIProvider: String, CaseIterable, Identifiable {
-    case openai = "OpenAI"
-    case gemini = "Gemini"
-    case claude = "Claude"
-    
-    var id: String { rawValue }
-    
-    var displayName: String { rawValue }
-    
-    var keyPlaceholder: String {
-        switch self {
-        case .openai: return "sk-..."
-        case .gemini: return "AIza..."
-        case .claude: return "sk-ant-..."
-        }
-    }
-}
-
 final class SettingsManager: ObservableObject {
-    @Published var selectedProvider: AIProvider = .openai
-    @Published var openAIKey: String = ""
-    @Published var geminiKey: String = ""
-    @Published var claudeKey: String = ""
-    @Published var launchAtStartup: Bool = false
+    @Published var launchAtStartup: Bool = true {
+        didSet { autoSave() }
+    }
+    @Published var autoUpdates: Bool = true {
+        didSet { autoSave() }
+    }
     
-    private let keychain = KeychainManager()
     private let userDefaults = UserDefaults.standard
+    private var isLoading = false
+    
+    // Hardcoded Gemini API key - in production, you might want to obfuscate this
+    static let geminiAPIKey = "AIzaSyBEmD7ZXT3aZGU8Eix6UhsbT5sBXfRt8F0"
     
     private enum Keys {
-        static let selectedProvider = "selectedProvider"
-        static let openAIKey = "openai_key"
-        static let geminiKey = "gemini_key"
-        static let claudeKey = "claude_key"
         static let launchAtStartup = "launchAtStartup"
+        static let autoUpdates = "autoUpdates"
     }
     
     init() {
@@ -43,39 +26,25 @@ final class SettingsManager: ObservableObject {
     }
     
     private func loadSettings() {
-        if let providerRawValue = userDefaults.string(forKey: Keys.selectedProvider),
-           let provider = AIProvider(rawValue: providerRawValue) {
-            selectedProvider = provider
-        }
-        
-        launchAtStartup = userDefaults.bool(forKey: Keys.launchAtStartup)
-        
-        openAIKey = keychain.getString(forKey: Keys.openAIKey) ?? ""
-        geminiKey = keychain.getString(forKey: Keys.geminiKey) ?? ""
-        claudeKey = keychain.getString(forKey: Keys.claudeKey) ?? ""
+        isLoading = true
+        launchAtStartup = userDefaults.object(forKey: Keys.launchAtStartup) as? Bool ?? true
+        autoUpdates = userDefaults.object(forKey: Keys.autoUpdates) as? Bool ?? true
+        isLoading = false
     }
     
-    func saveSettings() {
-        userDefaults.set(selectedProvider.rawValue, forKey: Keys.selectedProvider)
+    private func autoSave() {
+        guard !isLoading else { return }
         userDefaults.set(launchAtStartup, forKey: Keys.launchAtStartup)
-        
-        keychain.setString(openAIKey, forKey: Keys.openAIKey)
-        keychain.setString(geminiKey, forKey: Keys.geminiKey)
-        keychain.setString(claudeKey, forKey: Keys.claudeKey)
-        
+        userDefaults.set(autoUpdates, forKey: Keys.autoUpdates)
         updateLaunchAtStartupStatus()
     }
     
-    func getCurrentAPIKey() -> String? {
-        switch selectedProvider {
-        case .openai: return openAIKey.isEmpty ? nil : openAIKey
-        case .gemini: return geminiKey.isEmpty ? nil : geminiKey
-        case .claude: return claudeKey.isEmpty ? nil : claudeKey
-        }
+    func getCurrentAPIKey() -> String {
+        return SettingsManager.geminiAPIKey
     }
     
     func hasValidAPIKey() -> Bool {
-        getCurrentAPIKey() != nil
+        return true // Always true since we have a hardcoded API key
     }
     
     private func updateLaunchAtStartupStatus() {
@@ -112,40 +81,5 @@ final class SettingsManager: ObservableObject {
         } else {
             let _ = SMLoginItemSetEnabled(bundleIdentifier as CFString, false)
         }
-    }
-}
-
-final class KeychainManager {
-    func setString(_ value: String, forKey key: String) {
-        let data = Data(value.utf8)
-        
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecValueData as String: data
-        ]
-        
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
-    }
-    
-    func getString(forKey key: String) -> String? {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrAccount as String: key,
-            kSecReturnData as String: kCFBooleanTrue!,
-            kSecMatchLimit as String: kSecMatchLimitOne
-        ]
-        
-        var dataTypeRef: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &dataTypeRef)
-        
-        guard status == noErr,
-              let data = dataTypeRef as? Data,
-              let string = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-        
-        return string
     }
 }
