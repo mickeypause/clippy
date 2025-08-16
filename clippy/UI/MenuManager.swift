@@ -31,14 +31,13 @@ final class MenuManager: NSObject {
         
         addAIMenuItems(to: menu, selectedText: selectedText, selectionBounds: bounds, completion: completion)
         
-        let menuPosition = CGRect(
-            x: bounds.origin.x,
-            y: bounds.origin.y - 20,
-            width: max(bounds.width, 200),
-            height: 20
-        )
+        // Get the screen that contains the selected text
+        let screenWithText = getScreenContaining(point: bounds.origin)
         
-        displayMenuAtLocation(menu: menu, bounds: menuPosition)
+        // Calculate center of that screen
+        let centerPoint = getCenterPoint(for: screenWithText)
+        
+        displayMenuAtLocation(menu: menu, at: centerPoint)
     }
     
    
@@ -49,12 +48,7 @@ final class MenuManager: NSObject {
         selectionBounds: CGRect,
         completion: @escaping (String) -> Void
     ) {
-        guard apiService.hasValidAPIKey() else {
-            let item = NSMenuItem(title: "Configure AI Provider First...", action: nil, keyEquivalent: "")
-            item.isEnabled = false
-            menu.addItem(item)
-            return
-        }
+        // API key validation is now handled in AppDelegate before menu creation
         
         let aiTransformations = [
             ("✨ Improve Writing", "Improve the writing quality, grammar, and clarity of this text while maintaining its original meaning"),
@@ -81,15 +75,32 @@ final class MenuManager: NSObject {
         }
     }
     
-    private func displayMenuAtLocation(menu: NSMenu, bounds: CGRect) {
+    private func displayMenuAtLocation(menu: NSMenu, at point: NSPoint) {
         closeActiveWindow()
         
         menu.delegate = self
         
-        DispatchQueue.main.async {
-            let screenPoint = NSPoint(x: bounds.origin.x, y: bounds.origin.y + bounds.height)
-            menu.popUp(positioning: nil, at: screenPoint, in: nil)
+        // No additional async call - we're already on main queue from showContextMenu
+        menu.popUp(positioning: nil, at: point, in: nil)
+    }
+    
+    private func getScreenContaining(point: CGPoint) -> NSScreen {
+        // Find the screen that contains the selected text
+        for screen in NSScreen.screens {
+            if screen.frame.contains(point) {
+                return screen
+            }
         }
+        // Fallback to main screen if point is not found on any screen
+        return NSScreen.main ?? NSScreen.screens.first!
+    }
+    
+    private func getCenterPoint(for screen: NSScreen) -> NSPoint {
+        let frame = screen.visibleFrame
+        return NSPoint(
+            x: frame.midX,
+            y: frame.midY
+        )
     }
     
     @objc private func handleTransformation(_ sender: NSMenuItem) {

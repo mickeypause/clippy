@@ -121,6 +121,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             
+            // Check API key before showing menu to prevent flash
+            guard apiServiceManager?.hasValidAPIKey() == true else {
+                showAPIKeyAlert()
+                return
+            }
+            
             menuManager.showContextMenu(
                 at: selectionBounds,
                 selectedText: selectedText
@@ -158,5 +164,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.informativeText = "Please select some text first, then use the keyboard shortcut."
         alert.alertStyle = .informational
         alert.runModal()
+    }
+    
+    private func showAPIKeyAlert() {
+        let alert = NSAlert()
+        alert.messageText = "API Key Required"
+        alert.informativeText = "Please configure your AI provider in the settings first."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Cancel")
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            showSettingsWindow()
+        }
     }
 }
