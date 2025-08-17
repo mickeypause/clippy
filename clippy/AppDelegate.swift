@@ -23,7 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Clippy")
+            button.image = NSImage(named: "status-bar-icon")
             button.action = #selector(statusItemTapped)
             button.target = self
         }
