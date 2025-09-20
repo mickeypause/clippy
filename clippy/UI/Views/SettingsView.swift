@@ -2,75 +2,94 @@ import SwiftUI
 
 struct SettingsView: View {
     @ObservedObject var settingsManager: SettingsManager
-    
+    @ObservedObject var authenticationService: AuthenticationService
+    @ObservedObject var supabaseService: SupabaseService
+
     var body: some View {
-        ZStack {
-            // Glassmorphic background
-            VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
-                .ignoresSafeArea(.all)
-            
-            VStack(spacing: 20) {
+        ScrollView {
+            VStack(spacing: 24) {
                 // Header
                 headerSection
-                
+
+                // Authentication Section
+                authenticationSection
+
                 // App Settings
                 appSettingsSection
-                
+
                 // Usage Instructions
                 usageInstructionsSection
-                
-                Spacer()
-                
+
+                Spacer(minLength: 20)
+
                 // Version at bottom
                 versionFooter
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 24)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 20)
         }
-        .frame(width: 500, height: 600)
-        .background(.clear)
+        .frame(width: 520, height: 640)
+        .background(Color(NSColor.windowBackgroundColor))
     }
     
     private var headerSection: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
+            // Logo icon with Apple system styling
             Image(systemName: "doc.text")
-                .font(.system(size: 24, weight: .medium))
+                .font(.system(size: 28, weight: .medium))
                 .foregroundColor(.accentColor)
-            
-            Text("Clippy Settings")
-                .font(.title3)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .symbolRenderingMode(.hierarchical)
+
+            VStack(spacing: 4) {
+                Text("Clippy")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+
+                Text("AI Writing Tool for macOS")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
         }
-        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    private var authenticationSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Account")
+                .font(.headline)
+                .foregroundColor(.primary)
+
+            AppleCard {
+                AuthenticationView(
+                    authenticationService: authenticationService,
+                    supabaseService: supabaseService
+                )
+            }
+        }
     }
     
     private var appSettingsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("App Settings")
-                .font(.title3)
-                .fontWeight(.semibold)
+            Text("Settings")
+                .font(.headline)
                 .foregroundColor(.primary)
-            
-            GlassmorphicContainer(padding: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)) {
-                VStack(alignment: .leading, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Toggle("Launch Clippy at startup", isOn: $settingsManager.launchAtStartup)
-                            .toggleStyle(.checkbox)
-                        
-                        Text("Automatically start Clippy when you log in to your Mac")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 6) {
-                        Toggle("Automatic updates", isOn: $settingsManager.autoUpdates)
-                            .toggleStyle(.checkbox)
-                        
-                        Text("Keep Clippy updated with the latest features and fixes")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+
+            AppleCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    AppleSettingsRow(
+                        title: "Launch Clippy at startup",
+                        description: "Automatically start Clippy when you log in to your Mac",
+                        isOn: $settingsManager.launchAtStartup
+                    )
+
+                    Divider()
+
+                    AppleSettingsRow(
+                        title: "Automatic updates",
+                        description: "Keep Clippy updated with the latest features and fixes",
+                        isOn: $settingsManager.autoUpdates
+                    )
                 }
             }
         }
@@ -86,45 +105,97 @@ struct SettingsView: View {
     private var usageInstructionsSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("How to Use")
-                .font(.title3)
-                .fontWeight(.semibold)
+                .font(.headline)
                 .foregroundColor(.primary)
-            
-            GlassmorphicContainer(padding: EdgeInsets(top: 12, leading: 16, bottom: 12, trailing: 16)) {
-                VStack(alignment: .leading, spacing: 10) {
-                    InstructionStepView(number: "1", text: "Select text anywhere on your Mac")
-                    InstructionStepView(number: "2", text: "Press ⌘⇧T to open the transformation menu")
-                    InstructionStepView(number: "3", text: "Choose your desired transformation")
+
+            AppleCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    AppleInstructionStep(number: "1", text: "Select text anywhere on your Mac")
+                    AppleInstructionStep(number: "2", text: "Press ⌘⇧A to open the transformation menu")
+                    AppleInstructionStep(number: "3", text: "Choose your desired transformation")
                 }
             }
         }
     }
 }
 
-struct InstructionStepView: View {
+struct AppleInstructionStep: View {
     let number: String
     let text: String
-    
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Text(number)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.caption)
+                .fontWeight(.semibold)
                 .foregroundColor(.white)
                 .frame(width: 20, height: 20)
                 .background(
                     Circle()
                         .fill(Color.accentColor)
                 )
-            
+
             Text(text)
                 .font(.subheadline)
                 .foregroundColor(.primary)
-            
+                .lineLimit(nil)
+
             Spacer()
         }
     }
 }
 
+struct AppleSettingsRow: View {
+    let title: String
+    let description: String
+    @Binding var isOn: Bool
+
+    var body: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body)
+                    .foregroundColor(.primary)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Toggle("", isOn: $isOn)
+                .toggleStyle(SwitchToggleStyle())
+        }
+    }
+}
+
+struct AppleCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        content
+            .padding(16)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(NSColor.controlBackgroundColor))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color(NSColor.separatorColor), lineWidth: 0.5)
+                    )
+            )
+    }
+}
+
 #Preview {
-    SettingsView(settingsManager: SettingsManager())
+    SettingsView(
+        settingsManager: SettingsManager(),
+        authenticationService: AuthenticationService(),
+        supabaseService: SupabaseService(authenticationService: AuthenticationService())
+    )
 }

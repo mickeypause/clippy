@@ -10,9 +10,22 @@
 		EEBF81B72E4799DF00B467CB /* clippy.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = clippy.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		EE5149CB2E7F1DCE00BB3864 /* Exceptions for "clippy" folder in "clippy" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = EEBF81B62E4799DF00B467CB /* clippy */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		EEBF81B92E4799DF00B467CB /* clippy */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				EE5149CB2E7F1DCE00BB3864 /* Exceptions for "clippy" folder in "clippy" target */,
+			);
 			path = clippy;
 			sourceTree = "<group>";
 		};
@@ -258,6 +271,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = clippy/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Clippy;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -288,6 +302,7 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = clippy/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Clippy;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";

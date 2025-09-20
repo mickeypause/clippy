@@ -1,13 +1,13 @@
 import AppKit
 
 final class MenuManager: NSObject {
-    private let apiService: APIServiceManager
+    private let proxyService: ProxyService
     private var activeWindow: NSWindow?
     private let tooltipController = TooltipViewController()
     private let systemLevelReplacer = SystemLevelTextReplacer()
-    
-    init(apiService: APIServiceManager) {
-        self.apiService = apiService
+
+    init(proxyService: ProxyService) {
+        self.proxyService = proxyService
         super.init()
     }
     
@@ -51,14 +51,9 @@ final class MenuManager: NSObject {
         // API key validation is now handled in AppDelegate before menu creation
         
         let aiTransformations = [
-            ("✨ Improve Writing", "Improve the writing quality, grammar, and clarity of this text while maintaining its original meaning"),
-            ("📝 Summarize", "Create a concise summary of this text, highlighting the main points"),
-            ("✂️ Make Shorter", "Rewrite this text to be more concise while preserving all important information"),
             ("🔧 Fix Grammar", "Fix any grammar, spelling, and punctuation errors in this text"),
             ("🎯 Make Professional", "Rewrite this text in a professional tone suitable for business communication"),
-            ("😊 Make Casual", "Rewrite this text in a casual, friendly tone"),
-            ("🔍 Explain", "Explain what this text means in simple, easy-to-understand language"),
-            ("🌍 Translate", "Detect the language and translate this text to English (or to the most appropriate language)")
+            ("✂️ Make Shorter", "Rewrite this text to be more concise while preserving all important information")
         ]
         
         for (title, instruction) in aiTransformations {
@@ -126,15 +121,15 @@ final class MenuManager: NSObject {
         }
         
         closeActiveWindow()
-        
-        print("📡 Sending request to API...")
-        
-        apiService.transformText(action.selectedText, instruction: action.instruction) { [weak self] result in
+
+        print("📡 Sending request to proxy...")
+
+        proxyService.transformText(action.selectedText, instruction: action.instruction) { [weak self] result in
             DispatchQueue.main.async {
                 switch result {
                 case .success(let transformedText):
-                    print("✅ AI transformation successful: '\(transformedText)'")
-                    
+                    print("✅ Proxy transformation successful: '\(transformedText)'")
+
                     // Try system-level replacement first (works universally)
                     if self?.systemLevelReplacer.replaceSelectedTextUniversally(with: transformedText) == true {
                         print("✅ System-level text replacement succeeded")
@@ -143,8 +138,8 @@ final class MenuManager: NSObject {
                         action.completion(transformedText)
                     }
                 case .failure(let error):
-                    print("❌ AI transformation failed: \(error)")
-                    self?.showErrorAlert(error)
+                    print("❌ Proxy transformation failed: \(error)")
+                    self?.showProxyErrorAlert(error)
                 }
             }
         }
@@ -155,7 +150,7 @@ final class MenuManager: NSObject {
         activeWindow = nil
     }
     
-    private func showErrorAlert(_ error: APIError) {
+    private func showProxyErrorAlert(_ error: ProxyError) {
         let alert = NSAlert()
         alert.messageText = "Transformation Failed"
         alert.informativeText = error.localizedDescription

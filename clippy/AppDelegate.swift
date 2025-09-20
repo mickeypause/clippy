@@ -1,6 +1,7 @@
 import AppKit
 import SwiftUI
 import ApplicationServices
+import Combine
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
@@ -9,37 +10,55 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuManager: MenuManager?
     private var textReplacer: TextReplacer?
     private var settingsManager: SettingsManager?
-    private var apiServiceManager: APIServiceManager?
+    private var proxyService: ProxyService?
+    private var authenticationService: AuthenticationService?
+    private var supabaseService: SupabaseService?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupMenuBarApp()
         setupDependencies()
         requestPermissions()
+        setupURLHandler()
     }
     
     private func setupMenuBarApp() {
         NSApp.setActivationPolicy(.accessory)
         
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         
         if let button = statusItem?.button {
-            button.image = NSImage(named: "status-bar-icon")
+            // Use a system image as fallback if custom icon doesn't exist
+            button.image = NSImage(named: "status-bar-icon") ?? NSImage(systemSymbolName: "doc.text", accessibilityDescription: "Clippy")
             button.action = #selector(statusItemTapped)
             button.target = self
         }
+
+        // Initial title update
+        updateStatusItemTitle()
     }
     
     private func setupDependencies() {
         settingsManager = SettingsManager()
-        apiServiceManager = APIServiceManager()
+        authenticationService = AuthenticationService()
+        proxyService = ProxyService(authenticationService: authenticationService!)
+        supabaseService = SupabaseService(authenticationService: authenticationService!)
         textSelectionMonitor = TextSelectionMonitor()
         textReplacer = TextReplacer()
-        menuManager = MenuManager(apiService: apiServiceManager!)
-        
+        menuManager = MenuManager(proxyService: proxyService!)
+
         globalShortcutManager = GlobalShortcutManager { [weak self] in
             self?.handleGlobalShortcut()
         }
+
+        // Observe authentication changes to update menu bar
+        authenticationService?.objectWillChange.sink { [weak self] in
+            DispatchQueue.main.async {
+                self?.updateStatusItemTitle()
+            }
+        }.store(in: &cancellables)
     }
+
+    private var cancellables = Set<AnyCancellable>()
     
     private func requestPermissions() {
         let options: NSDictionary = [
@@ -79,9 +98,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func showSettingsWindow() {
-        let settingsView = SettingsView(settingsManager: settingsManager!)
+        let settingsView = SettingsView(
+            settingsManager: settingsManager!,
+            authenticationService: authenticationService!,
+            supabaseService: supabaseService!
+        )
         let hostingController = NSHostingController(rootView: settingsView)
-        
+
         let window = NSWindow(contentViewController: hostingController)
         window.title = "Clippy"
         window.setContentSize(NSSize(width: 500, height: 600))
@@ -121,9 +144,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
             
-            // Check API key before showing menu to prevent flash
-            guard apiServiceManager?.hasValidAPIKey() == true else {
-                showAPIKeyAlert()
+            // Check authentication before showing menu to prevent flash
+            guard authenticationService?.isAuthenticated == true else {
+                showAuthRequiredAlert()
                 return
             }
             
@@ -166,17 +189,80 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         alert.runModal()
     }
     
-    private func showAPIKeyAlert() {
+    private func showAuthRequiredAlert() {
         let alert = NSAlert()
-        alert.messageText = "API Key Required"
-        alert.informativeText = "Please configure your AI provider in the settings first."
+        alert.messageText = "Authentication Required"
+        alert.informativeText = "Please sign in to use AI transformations."
         alert.alertStyle = .warning
         alert.addButton(withTitle: "Open Settings")
         alert.addButton(withTitle: "Cancel")
-        
+
         let response = alert.runModal()
         if response == .alertFirstButtonReturn {
             showSettingsWindow()
+        }
+    }
+
+    // MARK: - URL Scheme Handling
+
+    private func setupURLHandler() {
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLEvent(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
+    @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
+        guard let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
+              let url = URL(string: urlString) else {
+            return
+        }
+
+        handleAuthenticationURL(url)
+    }
+
+    private func handleAuthenticationURL(_ url: URL) {
+        guard url.scheme == "clippyapp" else {
+            print("Invalid URL scheme: \(url.scheme ?? "nil")")
+            return
+        }
+
+        authenticationService?.handleAuthenticationCallback(url: url)
+
+        // Update status item after authentication
+        DispatchQueue.main.async {
+            self.updateStatusItemTitle()
+        }
+    }
+
+    // MARK: - Public Access Methods
+
+    func getAuthenticationService() -> AuthenticationService? {
+        return authenticationService
+    }
+
+    func getSupabaseService() -> SupabaseService? {
+        return supabaseService
+    }
+
+    // MARK: - Status Item Updates
+
+    private func updateStatusItemTitle() {
+        guard let button = statusItem?.button else { return }
+
+        if let authService = authenticationService,
+           authService.isAuthenticated,
+           let user = authService.user {
+            // Show user name when authenticated
+            let displayName = user.firstName ?? user.email.components(separatedBy: "@").first ?? "User"
+            button.title = " \(displayName)"
+            button.toolTip = "Clippy - Signed in as \(user.email)"
+        } else {
+            // Show default when not authenticated
+            button.title = ""
+            button.toolTip = "Clippy - Click to open settings"
         }
     }
 }
