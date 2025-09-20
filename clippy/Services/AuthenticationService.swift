@@ -17,7 +17,7 @@ class AuthenticationService: ObservableObject {
     private let keychainService = "com.clippy.app"
     private let tokenKey = "jwt_token"
     private let userKey = "user_data"
-    private let webAuthURL = "http://localhost:3001/auth/native?source=native"
+    private let webAuthURL = "https://clippy.it.com/auth/native?source=native"
 
     struct User: Codable {
         let id: String
