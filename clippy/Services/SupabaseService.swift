@@ -8,8 +8,8 @@
 import Foundation
 
 class SupabaseService: ObservableObject {
-    private let supabaseURL = "https://xokfqqulknpnlxjxeiaa.supabase.co"
-    private let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhva2ZxcXVsa25wbmx4anhlaWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ5MzYzODksImV4cCI6MjA3MDUxMjM4OX0.28a7OjZQPeyriAWrZQYrytY8smGvlO5_YIt4d_4JV2I"
+    private let supabaseURL = ""
+    private let supabaseAnonKey = ""
 
     private var authenticationService: AuthenticationService?
 
